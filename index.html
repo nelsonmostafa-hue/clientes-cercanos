@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Clientes cercanos</title>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    padding: 15px;
+}
+h2 {
+    margin-bottom: 10px;
+}
+button {
+    padding: 10px;
+    margin-bottom: 15px;
+    cursor: pointer;
+}
+#lista {
+    list-style: none;
+    padding: 0;
+}
+#lista li {
+    padding: 8px;
+    border-bottom: 1px solid #ddd;
+}
+.distancia {
+    font-weight: bold;
+}
+</style>
+
+</head>
+<body>
+
+<h2>Clientes dentro de 100 metros</h2>
+
+<button onclick="buscar()">Actualizar ubicación</button>
+
+<ul id="lista"></ul>
+
+<script>
+
+// =======================
+// PEGA TU BASE AQUÍ
+// =======================
+const clientes = [
+    { codigo: "1001", nombre: "Cliente A", lat: -25.3001, lon: -57.6359 },
+    { codigo: "1002", nombre: "Cliente B", lat: -25.3005, lon: -57.6362 },
+    { codigo: "1003", nombre: "Cliente C", lat: -25.3010, lon: -57.6370 }
+];
+
+// =======================
+// CONFIG
+// =======================
+const RADIO_METROS = 100;
+
+// =======================
+// DISTANCIA HAVERSINE
+// =======================
+function distancia(lat1, lon1, lat2, lon2) {
+    const R = 6371000; // metros
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+
+    const a =
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(lat1 * Math.PI / 180) *
+        Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon/2) * Math.sin(dLon/2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+    return R * c;
+}
+
+// =======================
+// BUSCAR CLIENTES
+// =======================
+function buscar() {
+    if (!navigator.geolocation) {
+        alert("Tu navegador no soporta geolocalización");
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(pos => {
+
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+
+        let cercanos = [];
+
+        for (let c of clientes) {
+            let d = distancia(lat, lon, c.lat, c.lon);
+
+            if (d <= RADIO_METROS) {
+                cercanos.push({
+                    ...c,
+                    distancia: d
+                });
+            }
+        }
+
+        cercanos.sort((a, b) => a.distancia - b.distancia);
+
+        mostrar(cercanos);
+
+    }, err => {
+        alert("No se pudo obtener la ubicación");
+    });
+}
+
+// =======================
+// MOSTRAR LISTA
+// =======================
+function mostrar(lista) {
+    const ul = document.getElementById("lista");
+    ul.innerHTML = "";
+
+    if (lista.length === 0) {
+        ul.innerHTML = "<li>No hay clientes dentro de 100 metros</li>";
+        return;
+    }
+
+    for (let c of lista) {
+        const li = document.createElement("li");
+        li.innerHTML = `
+            <div><b>${c.nombre}</b></div>
+            <div>Código: ${c.codigo}</div>
+            <div class="distancia">${c.distancia.toFixed(1)} m</div>
+        `;
+        ul.appendChild(li);
+    }
+}
+
+</script>
+
+</body>
+</html>
